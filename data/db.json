@@ -1,0 +1,403 @@
+{
+  "patients": [
+    {
+      "id": "P101",
+      "name": "Rahul Sharma",
+      "age": 22,
+      "gender": "Male",
+      "symptoms": "Fever and general fatigue",
+      "level": "Normal",
+      "vitals": {
+        "bp": "118/76",
+        "hr": 74,
+        "spo2": 99,
+        "temp": 99.4,
+        "gcs": 15
+      },
+      "assignedDoctor": "Dr. Marcus Vance",
+      "assignedBed": null,
+      "registered": 1791203157426,
+      "status": "Waiting",
+      "notes": [
+        "Mild dehydration noted",
+        "Prescribed oral fluids"
+      ]
+    },
+    {
+      "id": "P102",
+      "name": "Sneha Patel",
+      "age": 28,
+      "gender": "Female",
+      "symptoms": "Acute chest discomfort & anxiety",
+      "level": "High",
+      "vitals": {
+        "bp": "142/92",
+        "hr": 110,
+        "spo2": 96,
+        "temp": 98.6,
+        "gcs": 15
+      },
+      "assignedDoctor": "Dr. Elena Rostova",
+      "assignedBed": "Acute Bed 2",
+      "registered": 1791203937426,
+      "status": "Treated",
+      "notes": [
+        "ECG ordered",
+        "Troponin screening pending",
+        "Treatment commenced at 6:46:11 pm by Dr. Elena Rostova",
+        "Treatment successfully completed at 6:50:20 pm"
+      ],
+      "treatmentStarted": 1791206171146,
+      "completed": 1791206420837
+    },
+    {
+      "id": "P103",
+      "name": "Amit Verma",
+      "age": 35,
+      "gender": "Male",
+      "symptoms": "Severe migraine & photosensitivity",
+      "level": "Medium",
+      "vitals": {
+        "bp": "130/84",
+        "hr": 82,
+        "spo2": 98,
+        "temp": 98.4,
+        "gcs": 15
+      },
+      "assignedDoctor": "Dr. Sarah Chen",
+      "assignedBed": "Resuscitation Bay 1",
+      "registered": 1791204297426,
+      "status": "Treated",
+      "notes": [
+        "Dim light environment requested",
+        "Treatment commenced at 6:50:36 pm by Dr. Sarah Chen",
+        "Treatment successfully completed at 6:50:37 pm"
+      ],
+      "treatmentStarted": 1791206436206,
+      "completed": 1791206437979
+    },
+    {
+      "id": "P104",
+      "name": "Rohan Mehra",
+      "age": 41,
+      "gender": "Male",
+      "symptoms": "Sudden dyspnea & cyanosis",
+      "level": "Critical",
+      "vitals": {
+        "bp": "90/60",
+        "hr": 138,
+        "spo2": 84,
+        "temp": 101.2,
+        "gcs": 12
+      },
+      "assignedDoctor": "Dr. Sarah Chen",
+      "assignedBed": "Resuscitation 1",
+      "registered": 1791204597426,
+      "status": "Treated",
+      "treatmentStarted": 1791205077426,
+      "notes": [
+        "Oxygen therapy initiated via non-rebreather mask",
+        "IV line established",
+        "Treatment successfully completed at 6:43:55 pm"
+      ],
+      "completed": 1791206035468
+    },
+    {
+      "id": "P105",
+      "name": "Priya Nair",
+      "age": 30,
+      "gender": "Female",
+      "symptoms": "Superficial laceration on forearm",
+      "level": "Normal",
+      "vitals": {
+        "bp": "115/75",
+        "hr": 68,
+        "spo2": 99,
+        "temp": 98.2,
+        "gcs": 15
+      },
+      "assignedDoctor": null,
+      "assignedBed": null,
+      "registered": 1791204837426,
+      "status": "Waiting",
+      "notes": [
+        "Tetanus toxoid booster needed"
+      ]
+    },
+    {
+      "id": "P106",
+      "name": "Arjun Kapoor",
+      "age": 54,
+      "gender": "Male",
+      "symptoms": "High grade fever with rigors",
+      "level": "High",
+      "vitals": {
+        "bp": "136/88",
+        "hr": 104,
+        "spo2": 94,
+        "temp": 103.1,
+        "gcs": 14
+      },
+      "assignedDoctor": "Dr. Rajesh Kumar",
+      "assignedBed": "Resuscitation Bay 1",
+      "registered": 1791205137426,
+      "status": "Treated",
+      "notes": [
+        "Blood cultures drawn",
+        "Antipyretics administered",
+        "Treatment commenced at 6:50:28 pm by Dr. Rajesh Kumar",
+        "Treatment successfully completed at 6:50:30 pm"
+      ],
+      "treatmentStarted": 1791206428986,
+      "completed": 1791206430516
+    },
+    {
+      "id": "P107",
+      "name": "Kabir Singhania",
+      "age": 62,
+      "gender": "Male",
+      "symptoms": "Acute STEMI myocardial infarction; crushing substernal chest pain",
+      "level": "Critical",
+      "vitals": {
+        "bp": "160/100",
+        "hr": 124,
+        "spo2": 91,
+        "temp": 98.2,
+        "gcs": 14
+      },
+      "assignedDoctor": "Dr. Sarah Chen",
+      "assignedBed": "Resuscitation Bay 2",
+      "registered": 1791205939674,
+      "status": "Treated",
+      "notes": [
+        "🚨 INCOMING AMBULANCE TRAUMA CODE RED 🚨",
+        "Automated Priority 1 preemption",
+        "Treatment commenced at 6:44:02 pm by Dr. Sarah Chen",
+        "Treatment successfully completed at 6:44:05 pm"
+      ],
+      "treatmentStarted": 1791206042831,
+      "completed": 1791206045552
+    },
+    {
+      "id": "P108",
+      "name": "Aditya shinde",
+      "age": 28,
+      "gender": "Male",
+      "symptoms": "chest pain",
+      "level": "Normal",
+      "vitals": {
+        "bp": "120/80",
+        "hr": 100,
+        "spo2": 98,
+        "temp": 98.6,
+        "gcs": 15
+      },
+      "assignedDoctor": null,
+      "assignedBed": null,
+      "registered": 1791206406591,
+      "status": "Waiting",
+      "notes": [
+        "Admitted into triage queue at 6:50:06 pm"
+      ]
+    },
+    {
+      "id": "P109",
+      "name": "Kabir Singhania",
+      "age": 62,
+      "gender": "Male",
+      "symptoms": "Acute STEMI myocardial infarction; crushing substernal chest pain",
+      "level": "Critical",
+      "vitals": {
+        "bp": "160/100",
+        "hr": 124,
+        "spo2": 91,
+        "temp": 98.2,
+        "gcs": 14
+      },
+      "assignedDoctor": "Dr. Sarah Chen",
+      "assignedBed": "Resuscitation Bay 2",
+      "registered": 1791206461358,
+      "status": "Waiting",
+      "notes": [
+        "🚨 INCOMING AMBULANCE TRAUMA CODE RED 🚨",
+        "Automated Priority 1 preemption"
+      ]
+    }
+  ],
+  "doctors": [
+    {
+      "id": "DOC-1",
+      "name": "Dr. Sarah Chen",
+      "specialty": "Trauma & Critical Care",
+      "status": "Available",
+      "activePatient": null,
+      "avatar": "🩺"
+    },
+    {
+      "id": "DOC-2",
+      "name": "Dr. Rajesh Kumar",
+      "specialty": "Emergency Medicine",
+      "status": "Available",
+      "activePatient": null,
+      "avatar": "👨‍⚕️"
+    },
+    {
+      "id": "DOC-3",
+      "name": "Dr. Elena Rostova",
+      "specialty": "Cardiology",
+      "status": "Available",
+      "activePatient": null,
+      "avatar": "👩‍⚕️"
+    },
+    {
+      "id": "DOC-4",
+      "name": "Dr. Marcus Vance",
+      "specialty": "General & Pediatric ER",
+      "status": "Available",
+      "activePatient": null,
+      "avatar": "🧑‍⚕️"
+    }
+  ],
+  "beds": [
+    {
+      "id": "BAY-1",
+      "name": "Resuscitation Bay 1",
+      "type": "Critical",
+      "occupiedBy": null,
+      "isAvailable": true
+    },
+    {
+      "id": "BAY-2",
+      "name": "Resuscitation Bay 2",
+      "type": "Critical",
+      "occupiedBy": null,
+      "isAvailable": true
+    },
+    {
+      "id": "BAY-3",
+      "name": "Trauma Suite A",
+      "type": "High",
+      "occupiedBy": null,
+      "isAvailable": true
+    },
+    {
+      "id": "BAY-4",
+      "name": "Acute Bed 1",
+      "type": "Medium",
+      "occupiedBy": null,
+      "isAvailable": true
+    },
+    {
+      "id": "BAY-5",
+      "name": "Acute Bed 2",
+      "type": "Medium",
+      "occupiedBy": null,
+      "isAvailable": true
+    },
+    {
+      "id": "BAY-6",
+      "name": "Observation Bay Alpha",
+      "type": "Normal",
+      "occupiedBy": null,
+      "isAvailable": true
+    }
+  ],
+  "logs": [
+    {
+      "id": "L-1791206461358-982",
+      "time": 1791206461358,
+      "text": "🚨 CODE RED SIMULATION: Kabir Singhania (P109) incoming! Triage Level 1: CRITICAL",
+      "type": "critical"
+    },
+    {
+      "id": "L-1791206437979-285",
+      "time": 1791206437979,
+      "text": "Treatment completed for Amit Verma (P103). Discharged to recovery.",
+      "type": "info"
+    },
+    {
+      "id": "L-1791206436207-313",
+      "time": 1791206436207,
+      "text": "Patient Amit Verma (P103) moved to Treatment Room under Dr. Sarah Chen.",
+      "type": "treatment"
+    },
+    {
+      "id": "L-1791206430516-244",
+      "time": 1791206430516,
+      "text": "Treatment completed for Arjun Kapoor (P106). Discharged to recovery.",
+      "type": "info"
+    },
+    {
+      "id": "L-1791206428986-61",
+      "time": 1791206428986,
+      "text": "Patient Arjun Kapoor (P106) moved to Treatment Room under Dr. Rajesh Kumar.",
+      "type": "treatment"
+    },
+    {
+      "id": "L-1791206420837-177",
+      "time": 1791206420837,
+      "text": "Treatment completed for Sneha Patel (P102). Discharged to recovery.",
+      "type": "info"
+    },
+    {
+      "id": "L-1791206406591-487",
+      "time": 1791206406592,
+      "text": "Admitted Aditya shinde (P108) as Normal priority.",
+      "type": "info"
+    },
+    {
+      "id": "L-1791206171146-389",
+      "time": 1791206171146,
+      "text": "Patient Sneha Patel (P102) moved to Treatment Room under Dr. Elena Rostova.",
+      "type": "treatment"
+    },
+    {
+      "id": "L-1791206045552-649",
+      "time": 1791206045552,
+      "text": "Treatment completed for Kabir Singhania (P107). Discharged to recovery.",
+      "type": "info"
+    },
+    {
+      "id": "L-1791206042831-213",
+      "time": 1791206042831,
+      "text": "Patient Kabir Singhania (P107) moved to Treatment Room under Dr. Sarah Chen.",
+      "type": "treatment"
+    },
+    {
+      "id": "L-1791206035525-313",
+      "time": 1791206035525,
+      "text": "Treatment completed for Rohan Mehra (P104). Discharged to recovery.",
+      "type": "info"
+    },
+    {
+      "id": "L-1791205939674-910",
+      "time": 1791205939674,
+      "text": "🚨 CODE RED SIMULATION: Kabir Singhania (P107) incoming! Triage Level 1: CRITICAL",
+      "type": "critical"
+    },
+    {
+      "id": "L-1791205495242-445",
+      "time": 1791205495242,
+      "text": "Hospital system records reset to baseline demo state.",
+      "type": "info"
+    },
+    {
+      "id": "L-1",
+      "time": 1791203157426,
+      "text": "System initialized. MediQueue v2.0 Operational.",
+      "type": "info"
+    },
+    {
+      "id": "L-2",
+      "time": 1791204597426,
+      "text": "CRITICAL ALERT: Patient P104 (Rohan Mehra) registered with dyspnea. Priority 1 assigned.",
+      "type": "critical"
+    },
+    {
+      "id": "L-3",
+      "time": 1791205077426,
+      "text": "P104 moved to Treatment Room (Resuscitation Bay 1 under Dr. Sarah Chen).",
+      "type": "treatment"
+    }
+  ]
+}

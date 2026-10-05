@@ -1,0 +1,2534 @@
+<!doctype html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediQueue | Emergency Command & Priority Management System</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            med: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0284c7',
+              600: '#0369a1',
+              900: '#0c4a6e',
+              dark: '#080e1a',
+              card: '#0f172a',
+              accent: '#38bdf8'
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18 & Babel -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Three.js for 3D Animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/theme.css" />
+</head>
+
+<body class="bg-slate-900 text-slate-100 antialiased selection:bg-cyan-500 selection:text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    // ==========================================
+    // WEB AUDIO SOUND SYNTHESIZER
+    // ==========================================
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playClick() {
+        if (!this.enabled) return;
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.04);
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.04);
+      }
+      playSuccess() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + i * 0.07);
+          gain.gain.setValueAtTime(0.1, now + i * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.2);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.07);
+          osc.stop(now + i * 0.07 + 0.2);
+        });
+      }
+      playEmergencyAlert() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.setValueAtTime(659, now + 0.12);
+        osc.frequency.setValueAtTime(880, now + 0.24);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.45);
+      }
+      playHeartbeat() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc1 = this.ctx.createOscillator();
+        const gain1 = this.ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(85, now);
+        osc1.frequency.exponentialRampToValueAtTime(45, now + 0.08);
+        gain1.gain.setValueAtTime(0.2, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+        osc1.connect(gain1);
+        gain1.connect(this.ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.09);
+
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(110, now + 0.13);
+        osc2.frequency.exponentialRampToValueAtTime(50, now + 0.22);
+        gain2.gain.setValueAtTime(0.18, now + 0.13);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
+        osc2.connect(gain2);
+        gain2.connect(this.ctx.destination);
+        osc2.start(now + 0.13);
+        osc2.stop(now + 0.23);
+      }
+      playChime() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        [880, 1320].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+          gain.gain.setValueAtTime(0.12, now + idx * 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.5);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.15);
+          osc.stop(now + idx * 0.15 + 0.5);
+        });
+      }
+    }
+    const sound = new SoundEngine();
+
+    const LEVELS = {
+      Critical: { rank: 1, icon: '🔴', color: '#ef4444', text: 'text-red-500', bg: 'badge-critical', label: 'Priority 1 - Immediate' },
+      High: { rank: 2, icon: '🟠', color: '#f97316', text: 'text-orange-500', bg: 'badge-high', label: 'Priority 2 - Very Urgent' },
+      Medium: { rank: 3, icon: '🟡', color: '#eab308', text: 'text-yellow-500', bg: 'badge-medium', label: 'Priority 3 - Urgent' },
+      Normal: { rank: 4, icon: '🟢', color: '#22c55e', text: 'text-emerald-500', bg: 'badge-normal', label: 'Priority 4 - Standard' }
+    };
+
+    const sortQueue = list =>
+      [...list].filter(x => x.status === 'Waiting').sort((a, b) => {
+        const rankDiff = LEVELS[a.level].rank - LEVELS[b.level].rank;
+        return rankDiff !== 0 ? rankDiff : a.registered - b.registered;
+      });
+
+    const formatWait = t => {
+      const mins = Math.max(0, Math.floor((Date.now() - t) / 60000));
+      if (mins < 60) return `${mins}m`;
+      const hrs = Math.floor(mins / 60);
+      return `${hrs}h ${mins % 60}m`;
+    };
+
+    // ==========================================
+    // MAIN APP COMPONENT
+    // ==========================================
+    function App() {
+      const [patients, setPatients] = useState([]);
+      const [doctors, setDoctors] = useState([]);
+      const [beds, setBeds] = useState([]);
+      const [logs, setLogs] = useState([]);
+      const [page, setPage] = useState('Dashboard');
+      const [toast, setToast] = useState(null);
+      const [darkMode, setDarkMode] = useState(true);
+      const [audioEnabled, setAudioEnabled] = useState(true);
+      const [serverConnected, setServerConnected] = useState(false);
+      const [searchQuery, setSearchQuery] = useState('');
+      const [filterLevel, setFilterLevel] = useState('All');
+      const [filterStatus, setFilterStatus] = useState('All');
+      const [activeModalPatient, setActiveModalPatient] = useState(null);
+      const [codeRedActive, setCodeRedActive] = useState(false);
+
+      const notify = (msg, type = 'info') => {
+        setToast({ msg, type });
+        if (type === 'critical') sound.playEmergencyAlert();
+        else if (type === 'success') sound.playSuccess();
+        else sound.playClick();
+        setTimeout(() => setToast(null), 3200);
+      };
+
+      useEffect(() => {
+        sound.enabled = audioEnabled;
+      }, [audioEnabled]);
+
+      useEffect(() => {
+        document.documentElement.classList.toggle('dark', darkMode);
+      }, [darkMode]);
+
+      const fetchData = async () => {
+        try {
+          const [pRes, dRes, bRes, lRes] = await Promise.all([
+            fetch('/api/patients'),
+            fetch('/api/doctors'),
+            fetch('/api/beds'),
+            fetch('/api/logs')
+          ]);
+          if (pRes.ok) setPatients(await pRes.json());
+          if (dRes.ok) setDoctors(await dRes.json());
+          if (bRes.ok) setBeds(await bRes.json());
+          if (lRes.ok) setLogs(await lRes.json());
+          setServerConnected(true);
+        } catch (err) {
+          console.warn('Backend not reached, fallback to local storage:', err);
+          setServerConnected(false);
+          const saved = localStorage.getItem('mq_v2');
+          if (saved) {
+            try { setPatients(JSON.parse(saved)); } catch (e) {}
+          }
+        }
+      };
+
+      useEffect(() => {
+        fetchData();
+
+        let eventSource;
+        try {
+          eventSource = new EventSource('/api/events');
+          eventSource.onopen = () => setServerConnected(true);
+          
+          eventSource.addEventListener('patient:created', e => {
+            const data = JSON.parse(e.data);
+            setPatients(prev => {
+              const exists = prev.some(p => p.id === data.patient.id);
+              return exists ? prev : [...prev, data.patient];
+            });
+            if (data.isEmergency) {
+              setCodeRedActive(true);
+              sound.playEmergencyAlert();
+              setTimeout(() => setCodeRedActive(false), 5000);
+            }
+            if (data.log) setLogs(prev => [data.log, ...prev]);
+          });
+
+          eventSource.addEventListener('patient:updated', e => {
+            const data = JSON.parse(e.data);
+            setPatients(prev => prev.map(p => p.id === data.patient.id ? data.patient : p));
+            if (data.log) setLogs(prev => [data.log, ...prev]);
+          });
+
+          eventSource.addEventListener('patient:treated', e => {
+            const data = JSON.parse(e.data);
+            setPatients(prev => prev.map(p => p.id === data.patient.id ? data.patient : p));
+            if (data.doctors) setDoctors(data.doctors);
+            if (data.beds) setBeds(data.beds);
+            if (data.log) setLogs(prev => [data.log, ...prev]);
+          });
+
+          eventSource.addEventListener('patient:completed', e => {
+            const data = JSON.parse(e.data);
+            setPatients(prev => prev.map(p => p.id === data.patient.id ? data.patient : p));
+            if (data.doctors) setDoctors(data.doctors);
+            if (data.beds) setBeds(data.beds);
+            if (data.log) setLogs(prev => [data.log, ...prev]);
+            try { confetti({ particleCount: 75, spread: 60, origin: { y: 0.7 } }); } catch (err) {}
+          });
+
+          eventSource.addEventListener('patient:retriaged', e => {
+            const data = JSON.parse(e.data);
+            setPatients(prev => prev.map(p => p.id === data.patient.id ? data.patient : p));
+            if (data.log) setLogs(prev => [data.log, ...prev]);
+          });
+
+          eventSource.addEventListener('patient:removed', e => {
+            const data = JSON.parse(e.data);
+            setPatients(prev => prev.map(p => p.id === data.patientId ? { ...p, status: 'Removed' } : p));
+            if (data.doctors) setDoctors(data.doctors);
+            if (data.beds) setBeds(data.beds);
+            if (data.log) setLogs(prev => [data.log, ...prev]);
+          });
+
+          eventSource.addEventListener('system:reset', () => {
+            fetchData();
+          });
+
+          eventSource.onerror = () => {
+            setServerConnected(false);
+          };
+        } catch (e) {
+          console.warn('SSE error:', e);
+        }
+
+        return () => {
+          if (eventSource) eventSource.close();
+        };
+      }, []);
+
+      useEffect(() => {
+        try {
+          if (patients.length) localStorage.setItem('mq_v2', JSON.stringify(patients));
+        } catch (e) {}
+      }, [patients]);
+
+      const queue = useMemo(() => sortQueue(patients), [patients]);
+      const currentInTreatment = patients.find(p => p.status === 'In Treatment');
+      const treatedHistory = patients.filter(p => p.status === 'Treated');
+
+      const handleRegister = async (newPatientData) => {
+        sound.playClick();
+        try {
+          const res = await fetch('/api/patients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newPatientData)
+          });
+          if (res.ok) {
+            const created = await res.json();
+            setPatients(prev => [...prev.filter(p => p.id !== created.id), created]);
+            notify(`Patient ${created.name} (${created.id}) admitted into ${created.level} priority!`, created.level === 'Critical' ? 'critical' : 'success');
+            setPage('Emergency Queue');
+          }
+        } catch (err) {
+          const id = 'P' + (Math.max(100, ...patients.map(p => parseInt(p.id.replace(/\D/g, '') || 0))) + 1);
+          const localPat = { ...newPatientData, id, registered: Date.now(), status: 'Waiting' };
+          setPatients(prev => [...prev, localPat]);
+          notify(`Patient ${localPat.name} registered (local mode)`, 'success');
+          setPage('Emergency Queue');
+        }
+      };
+
+      const handleTreatPatient = async (patientId) => {
+        sound.playClick();
+        if (currentInTreatment && currentInTreatment.id !== patientId) {
+          notify(`Treatment room currently occupied by ${currentInTreatment.name}`, 'info');
+          return setPage('Treatment Room');
+        }
+        const target = patientId ? patients.find(p => p.id === patientId) : queue[0];
+        if (!target) return notify('Queue is empty', 'info');
+
+        try {
+          const res = await fetch(`/api/patients/${target.id}/treat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+          });
+          if (res.ok) {
+            const updated = await res.json();
+            setPatients(prev => prev.map(p => p.id === updated.id ? updated : p));
+            notify(`Patient ${updated.name} moved to Treatment Room!`, 'success');
+            setPage('Treatment Room');
+          } else {
+            const err = await res.json();
+            notify(err.error || 'Failed to start treatment', 'critical');
+          }
+        } catch (err) {
+          setPatients(prev => prev.map(p => p.id === target.id ? { ...p, status: 'In Treatment', treatmentStarted: Date.now() } : p));
+          notify(`Patient ${target.name} moved to Treatment Room (local mode)`, 'success');
+          setPage('Treatment Room');
+        }
+      };
+
+      const handleCompleteTreatment = async (patientId) => {
+        sound.playSuccess();
+        const id = patientId || currentInTreatment?.id;
+        if (!id) return;
+
+        try {
+          const res = await fetch(`/api/patients/${id}/complete`, { method: 'POST' });
+          if (res.ok) {
+            const updated = await res.json();
+            setPatients(prev => prev.map(p => p.id === updated.id ? updated : p));
+            notify(`✓ Treatment completed for ${updated.name}! Record archived.`, 'success');
+            try { confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); } catch (e) {}
+          }
+        } catch (err) {
+          setPatients(prev => prev.map(p => p.id === id ? { ...p, status: 'Treated', completed: Date.now() } : p));
+          notify('✓ Treatment completed (local mode)', 'success');
+        }
+      };
+
+      const handleRetriage = async (patientId, newLevel) => {
+        sound.playClick();
+        try {
+          const res = await fetch(`/api/patients/${patientId}/retriage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ level: newLevel })
+          });
+          if (res.ok) {
+            const updated = await res.json();
+            setPatients(prev => prev.map(p => p.id === updated.id ? updated : p));
+            notify(`Patient ${updated.id} re-triaged to ${newLevel}`, newLevel === 'Critical' ? 'critical' : 'info');
+          }
+        } catch (err) {
+          setPatients(prev => prev.map(p => p.id === patientId ? { ...p, level: newLevel } : p));
+          notify(`Re-triaged to ${newLevel} (local mode)`, 'info');
+        }
+      };
+
+      const handleRemove = async (patientId) => {
+        sound.playClick();
+        if (!confirm(`Are you sure you want to discharge/remove record ${patientId}?`)) return;
+        try {
+          const res = await fetch(`/api/patients/${patientId}`, { method: 'DELETE' });
+          if (res.ok) {
+            setPatients(prev => prev.map(p => p.id === patientId ? { ...p, status: 'Removed' } : p));
+            notify(`Patient ${patientId} record removed`, 'info');
+          }
+        } catch (err) {
+          setPatients(prev => prev.map(p => p.id === patientId ? { ...p, status: 'Removed' } : p));
+          notify(`Patient ${patientId} removed (local mode)`, 'info');
+        }
+      };
+
+      const triggerCodeRedSimulation = async () => {
+        sound.playEmergencyAlert();
+        setCodeRedActive(true);
+        setTimeout(() => setCodeRedActive(false), 5000);
+        try {
+          const res = await fetch('/api/emergency-simulate', { method: 'POST' });
+          if (res.ok) {
+            const emergencyPat = await res.json();
+            setPatients(prev => [...prev.filter(p => p.id !== emergencyPat.id), emergencyPat]);
+            notify(`🚨 CODE RED: Inbound Trauma Patient ${emergencyPat.name} arrived! Enqueued at Top Priority!`, 'critical');
+          }
+        } catch (err) {
+          notify('🚨 Code Red simulated locally!', 'critical');
+        }
+      };
+
+      const handleResetDb = async () => {
+        sound.playClick();
+        if (!confirm('Reset all hospital records back to original demo state?')) return;
+        try {
+          await fetch('/api/reset', { method: 'POST' });
+          await fetchData();
+          notify('System data reset to baseline successfully', 'success');
+        } catch (err) {
+          notify('Reset failed', 'critical');
+        }
+      };
+
+      const navItems = [
+        { id: 'Dashboard', label: 'Command Center', icon: '⚡' },
+        { id: 'Register Patient', label: 'Admit Patient & AI Triage', icon: '📝' },
+        { id: 'Emergency Queue', label: 'Emergency Priority Queue', icon: '🚨' },
+        { id: '3D Ward', label: '3D Digital Twin ER Ward', icon: '🏥' },
+        { id: 'Linked List', label: 'Linked List Architecture', icon: '🔗' },
+        { id: 'Patient Records', label: 'Patient Master Records', icon: '📋' },
+        { id: 'Treatment Room', label: 'Active Treatment Bay', icon: '🩺' },
+        { id: 'Treatment History', label: 'Discharge Archive', icon: '📜' }
+      ];
+
+      return (
+        <div className={`min-h-screen flex flex-col ${codeRedActive ? 'code-red-active' : ''}`}>
+          
+          {/* SIDEBAR NAVIGATION */}
+          <aside className="fixed inset-y-0 left-0 w-72 glass-panel border-r border-slate-700/50 hidden xl:flex flex-col z-20">
+            <div className="p-6 border-b border-slate-700/50">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-cyan-500/25">
+                  ✚
+                </div>
+                <div>
+                  <h1 className="font-extrabold text-xl tracking-tight text-white flex items-center gap-2">
+                    MediQueue <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 font-mono border border-cyan-500/30">v2.0 3D</span>
+                  </h1>
+                  <p className="text-xs text-slate-400">Emergency Priority System</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-4 py-3">
+              <button 
+                onClick={triggerCodeRedSimulation}
+                className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 hover:brightness-110 active:scale-95 transition-all">
+                <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                🚨 SIMULATE CODE RED ER
+              </button>
+            </div>
+
+            <nav className="flex-1 px-4 py-2 space-y-1.5 overflow-y-auto">
+              {navItems.map(item => {
+                const active = page === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => { sound.playClick(); setPage(item.id); }}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-between transition-all ${
+                      active
+                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/30'
+                        : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="text-base">{item.icon}</span>
+                      {item.label}
+                    </span>
+                    {item.id === 'Emergency Queue' && queue.length > 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white font-bold">
+                        {queue.length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="p-4 m-4 rounded-2xl bg-slate-800/70 border border-slate-700/60 text-xs">
+              <div className="flex items-center justify-between text-slate-300 font-bold mb-1">
+                <span>Algorithmic Core</span>
+                <span className="text-cyan-400 font-mono">O(1) Treat</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Min-Heap Priority Queue combined with Doubly Linked Patient Chains for zero-latency triage preemption.
+              </p>
+              <div className="mt-3 pt-2 border-t border-slate-700/60 flex items-center justify-between">
+                <button onClick={handleResetDb} className="text-slate-400 hover:text-rose-400 transition-colors text-[11px] flex items-center gap-1">
+                  <span>↺</span> Reset Demo Data
+                </button>
+                <span className="text-[10px] text-slate-500 font-mono">Port 3000</span>
+              </div>
+            </div>
+          </aside>
+
+          {/* MAIN CONTENT AREA */}
+          <div className="flex-1 xl:ml-72 flex flex-col min-w-0">
+            
+            {/* TOP HEADER */}
+            <header className="h-18 glass-panel border-b border-slate-700/50 sticky top-0 z-30 flex items-center justify-between px-5 md:px-8 py-3">
+              <div className="flex items-center gap-4">
+                <div className="xl:hidden flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-cyan-600 flex items-center justify-center text-white">✚</div>
+                  <b className="text-white text-base">MediQueue</b>
+                </div>
+
+                <div className="hidden sm:flex items-center gap-3">
+                  <span className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Current View:</span>
+                  <span className="text-sm font-bold text-white px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60">
+                    {page}
+                  </span>
+                </div>
+
+                {/* Animated ECG Heartbeat Monitor */}
+                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/70 border border-slate-700/60">
+                  <HeartbeatCanvas criticalCount={queue.filter(p => p.level === 'Critical').length} />
+                  <div className="text-left">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Hospital Pulse</div>
+                    <div className="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1">
+                      <span>{queue.filter(p => p.level === 'Critical').length > 0 ? '118' : '76'} BPM</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Controls */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/60 text-xs">
+                  <span className={`w-2 h-2 rounded-full ${serverConnected ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-amber-400 shadow-[0_0_8px_#fbbf24]'}`}></span>
+                  <span className="text-slate-300 font-medium hidden sm:inline">
+                    {serverConnected ? 'Live Server & SSE' : 'Offline Storage'}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => { sound.playClick(); setAudioEnabled(!audioEnabled); }}
+                  className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 text-sm transition-all"
+                  title={audioEnabled ? 'Sound Effects Enabled (Click to Mute)' : 'Sound Muted'}
+                >
+                  {audioEnabled ? '🔊' : '🔇'}
+                </button>
+
+                <button
+                  onClick={() => { sound.playClick(); setDarkMode(!darkMode); }}
+                  className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 text-sm transition-all"
+                  title="Toggle Light / Dark Mode"
+                >
+                  {darkMode ? '☀️' : '🌙'}
+                </button>
+
+                <button 
+                  onClick={triggerCodeRedSimulation}
+                  className="xl:hidden px-3 py-2 rounded-xl bg-red-600 text-white font-bold text-xs">
+                  🚨 CODE RED
+                </button>
+              </div>
+            </header>
+
+            {/* Mobile Nav Pills */}
+            <div className="xl:hidden flex items-center gap-2 p-3 overflow-x-auto bg-slate-900/90 border-b border-slate-800">
+              {navItems.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => { sound.playClick(); setPage(item.id); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                    page === item.id ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-300'
+                  }`}
+                >
+                  {item.icon} {item.label}
+                </button>
+              ))}
+            </div>
+
+            {/* PAGE VIEW ROUTER */}
+            <main className="p-4 md:p-8 flex-1 max-w-7xl w-full mx-auto">
+              {page === 'Dashboard' && (
+                <DashboardView
+                  patients={patients}
+                  queue={queue}
+                  currentInTreatment={currentInTreatment}
+                  treatedHistory={treatedHistory}
+                  doctors={doctors}
+                  beds={beds}
+                  logs={logs}
+                  onNavigate={setPage}
+                  onTreatNext={() => handleTreatPatient()}
+                  onCodeRed={triggerCodeRedSimulation}
+                  onSelectPatient={setActiveModalPatient}
+                />
+              )}
+
+              {page === 'Register Patient' && (
+                <RegisterView
+                  onSubmit={handleRegister}
+                  onCancel={() => setPage('Dashboard')}
+                />
+              )}
+
+              {page === 'Emergency Queue' && (
+                <QueueView
+                  queue={queue}
+                  onTreat={handleTreatPatient}
+                  onRetriage={handleRetriage}
+                  onRemove={handleRemove}
+                  onSelectPatient={setActiveModalPatient}
+                  onCallPatient={(p) => {
+                    sound.playChime();
+                    notify(`Calling patient ${p.id} (${p.name}) to Triage Consultation Desk`, 'info');
+                  }}
+                />
+              )}
+
+              {page === '3D Ward' && (
+                <ERWard3DView
+                  beds={beds}
+                  patients={patients}
+                  doctors={doctors}
+                  onSelectPatient={setActiveModalPatient}
+                  onTreat={handleTreatPatient}
+                />
+              )}
+
+              {page === 'Linked List' && (
+                <LinkedListVisualizerView
+                  patients={patients}
+                  onSelectPatient={setActiveModalPatient}
+                />
+              )}
+
+              {page === 'Patient Records' && (
+                <PatientRecordsView
+                  patients={patients}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  filterLevel={filterLevel}
+                  setFilterLevel={setFilterLevel}
+                  filterStatus={filterStatus}
+                  setFilterStatus={setFilterStatus}
+                  onRemove={handleRemove}
+                  onRetriage={handleRetriage}
+                  onSelectPatient={setActiveModalPatient}
+                />
+              )}
+
+              {page === 'Treatment Room' && (
+                <TreatmentRoomView
+                  current={currentInTreatment}
+                  doctors={doctors}
+                  beds={beds}
+                  onComplete={() => handleCompleteTreatment(currentInTreatment?.id)}
+                  onCancel={() => {
+                    if (currentInTreatment) {
+                      sound.playClick();
+                      handleRetriage(currentInTreatment.id, currentInTreatment.level);
+                      notify('Treatment returned to waiting queue', 'info');
+                      setPage('Emergency Queue');
+                    }
+                  }}
+                  onSelectPatient={setActiveModalPatient}
+                />
+              )}
+
+              {page === 'Treatment History' && (
+                <HistoryView
+                  history={treatedHistory}
+                  onSelectPatient={setActiveModalPatient}
+                />
+              )}
+            </main>
+          </div>
+
+          {/* PATIENT DETAIL MODAL */}
+          {activeModalPatient && (
+            <PatientDetailModal
+              patient={activeModalPatient}
+              doctors={doctors}
+              beds={beds}
+              onClose={() => setActiveModalPatient(null)}
+              onRetriage={handleRetriage}
+              onTreat={handleTreatPatient}
+            />
+          )}
+
+          {/* NOTIFICATION TOAST */}
+          {toast && (
+            <div className={`fixed bottom-6 right-6 z-50 px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-xl border text-sm font-semibold transition-all transform animate-bounce ${
+              toast.type === 'critical'
+                ? 'bg-rose-950/90 text-rose-200 border-rose-600/50 shadow-rose-900/40'
+                : toast.type === 'success'
+                ? 'bg-emerald-950/90 text-emerald-200 border-emerald-600/50 shadow-emerald-900/40'
+                : 'bg-slate-900/90 text-slate-100 border-slate-700/60 shadow-black/50'
+            }`}>
+              <span className="text-xl">
+                {toast.type === 'critical' ? '🚨' : toast.type === 'success' ? '✓' : 'ℹ️'}
+              </span>
+              <span>{toast.msg}</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 3D HOLOGRAPHIC CARDIAC REACTOR CORE
+    // ==========================================
+    function ThreeHolographicCore({ queue, currentInTreatment, onFilterPriority, activePriority }) {
+      const containerRef = useRef(null);
+      const rendererRef = useRef(null);
+      const sceneRef = useRef(null);
+      const cameraRef = useRef(null);
+      const reqIdRef = useRef(null);
+      const particlesMeshRef = useRef(null);
+      const coreMeshRef = useRef(null);
+      const ringsRef = useRef([]);
+
+      const criticalWaiting = queue.filter(p => p.level === 'Critical').length;
+
+      useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const width = container.clientWidth;
+        const height = container.clientHeight || 300;
+
+        const scene = new THREE.Scene();
+        sceneRef.current = scene;
+
+        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+        camera.position.set(0, 0, 7.5);
+        cameraRef.current = camera;
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.innerHTML = '';
+        container.appendChild(renderer.domElement);
+        rendererRef.current = renderer;
+
+        const coreGeo = new THREE.IcosahedronGeometry(1.4, 2);
+        const coreMat = new THREE.MeshPhongMaterial({
+          color: criticalWaiting > 0 ? 0xef4444 : 0x06b6d4,
+          emissive: criticalWaiting > 0 ? 0x991b1b : 0x0284c7,
+          emissiveIntensity: 0.6,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.85
+        });
+        const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+        scene.add(coreMesh);
+        coreMeshRef.current = coreMesh;
+
+        const innerGeo = new THREE.SphereGeometry(0.8, 16, 16);
+        const innerMat = new THREE.MeshBasicMaterial({
+          color: criticalWaiting > 0 ? 0xff4d6d : 0x38bdf8,
+          transparent: true,
+          opacity: 0.6
+        });
+        const innerMesh = new THREE.Mesh(innerGeo, innerMat);
+        coreMesh.add(innerMesh);
+
+        const rings = [];
+        const ringConfigs = [
+          { radius: 2.2, tube: 0.02, rotX: Math.PI / 3, rotY: 0, color: 0x38bdf8 },
+          { radius: 2.5, tube: 0.02, rotX: -Math.PI / 4, rotY: Math.PI / 6, color: 0x818cf8 },
+          { radius: 2.8, tube: 0.02, rotX: Math.PI / 6, rotY: -Math.PI / 3, color: 0x34d399 }
+        ];
+
+        ringConfigs.forEach(cfg => {
+          const ringGeo = new THREE.TorusGeometry(cfg.radius, cfg.tube, 8, 64);
+          const ringMat = new THREE.MeshBasicMaterial({ color: cfg.color, transparent: true, opacity: 0.5 });
+          const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+          ringMesh.rotation.x = cfg.rotX;
+          ringMesh.rotation.y = cfg.rotY;
+          scene.add(ringMesh);
+          rings.push(ringMesh);
+        });
+        ringsRef.current = rings;
+
+        const particleCount = 180;
+        const particleGeo = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+
+        for (let i = 0; i < particleCount * 3; i += 3) {
+          positions[i] = (Math.random() - 0.5) * 8;
+          positions[i + 1] = (Math.random() - 0.5) * 8;
+          positions[i + 2] = (Math.random() - 0.5) * 8;
+
+          colors[i] = 0.2 + Math.random() * 0.4;
+          colors[i + 1] = 0.7 + Math.random() * 0.3;
+          colors[i + 2] = 0.9 + Math.random() * 0.1;
+        }
+
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const particleMat = new THREE.PointsMaterial({
+          size: 0.06,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.75
+        });
+        const particlesMesh = new THREE.Points(particleGeo, particleMat);
+        scene.add(particlesMesh);
+        particlesMeshRef.current = particlesMesh;
+
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambLight);
+
+        const pointLight = new THREE.PointLight(0x38bdf8, 2, 50);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        let isDragging = false;
+        let prevMousePos = { x: 0, y: 0 };
+
+        const onPointerDown = e => {
+          isDragging = true;
+          prevMousePos = { x: e.clientX, y: e.clientY };
+        };
+        const onPointerMove = e => {
+          if (!isDragging) return;
+          const deltaX = e.clientX - prevMousePos.x;
+          const deltaY = e.clientY - prevMousePos.y;
+          coreMesh.rotation.y += deltaX * 0.008;
+          coreMesh.rotation.x += deltaY * 0.008;
+          prevMousePos = { x: e.clientX, y: e.clientY };
+        };
+        const onPointerUp = () => { isDragging = false; };
+
+        container.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+
+        let clock = new THREE.Clock();
+        const animate = () => {
+          reqIdRef.current = requestAnimationFrame(animate);
+          const elapsed = clock.getElapsedTime();
+          
+          const pulseSpeed = criticalWaiting > 0 ? 5.5 : 2.0;
+          const scale = 1 + Math.sin(elapsed * pulseSpeed) * 0.08;
+          coreMesh.scale.set(scale, scale, scale);
+
+          if (!isDragging) {
+            coreMesh.rotation.y += 0.006;
+            coreMesh.rotation.z += 0.003;
+          }
+
+          rings.forEach((r, idx) => {
+            r.rotation.z += 0.005 * (idx + 1) * (idx % 2 === 0 ? 1 : -1);
+          });
+
+          particlesMesh.rotation.y = elapsed * 0.04;
+
+          renderer.render(scene, camera);
+        };
+        animate();
+
+        const handleResize = () => {
+          if (!container || !renderer || !camera) return;
+          const w = container.clientWidth;
+          const h = container.clientHeight || 300;
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w, h);
+        };
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+          window.removeEventListener('resize', handleResize);
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+          container.removeEventListener('pointerdown', onPointerDown);
+          cancelAnimationFrame(reqIdRef.current);
+          if (renderer.domElement && container.contains(renderer.domElement)) {
+            container.removeChild(renderer.domElement);
+          }
+          renderer.dispose();
+        };
+      }, [criticalWaiting]);
+
+      return (
+        <div className="relative w-full h-72 md:h-80 rounded-3xl bg-gradient-to-b from-slate-900/90 to-slate-950/90 border border-slate-700/60 overflow-hidden shadow-2xl">
+          <div ref={containerRef} className="three-canvas-container cursor-grab active:cursor-grabbing" />
+
+          <div className="absolute top-4 left-5 pointer-events-none">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+              <span className="text-[11px] font-mono uppercase tracking-widest text-cyan-400 font-bold">
+                3D TRIAGE HOLOGRAPHIC CORE
+              </span>
+            </div>
+            <h3 className="text-xl font-extrabold text-white mt-1">Hospital Emergency Pulse</h3>
+            <p className="text-xs text-slate-400">Drag to orbit 360° • Click triage nodes to inspect</p>
+          </div>
+
+          <div className="absolute bottom-4 left-4 right-4 flex flex-wrap items-center justify-between gap-2 bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-slate-700/50">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => onFilterPriority('All')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  activePriority === 'All' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                All Waiting ({queue.length})
+              </button>
+              {Object.keys(LEVELS).map(lvl => {
+                const count = queue.filter(p => p.level === lvl).length;
+                return (
+                  <button
+                    key={lvl}
+                    onClick={() => onFilterPriority(lvl)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                      activePriority === lvl
+                        ? 'bg-slate-700 text-white border border-cyan-400 shadow-md'
+                        : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    <span>{LEVELS[lvl].icon}</span>
+                    <span>{lvl}</span>
+                    <span className="px-1.5 py-0.2 rounded-md bg-slate-900 text-[10px] font-mono text-cyan-300">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="text-[11px] font-mono text-slate-400 hidden sm:block">
+              {criticalWaiting > 0 ? (
+                <span className="text-rose-400 font-bold flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                  HIGH CRISIS INDEX
+                </span>
+              ) : (
+                <span className="text-emerald-400 font-bold">NORMAL SYSTEM FLOW</span>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 3D EMERGENCY WARD & BED DIGITAL TWIN VIEW
+    // ==========================================
+    function ERWard3DView({ beds, patients, doctors, onSelectPatient, onTreat }) {
+      const containerRef = useRef(null);
+      const [selectedBed, setSelectedBed] = useState(null);
+
+      useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const width = container.clientWidth;
+        const height = 420;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a1120);
+
+        const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
+        camera.position.set(0, 14, 16);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.innerHTML = '';
+        container.appendChild(renderer.domElement);
+
+        const grid = new THREE.GridHelper(20, 20, 0x1e3a8a, 0x1e293b);
+        grid.position.y = -0.01;
+        scene.add(grid);
+
+        const bedsGroup = new THREE.Group();
+        scene.add(bedsGroup);
+
+        beds.forEach((bed, i) => {
+          const row = Math.floor(i / 3);
+          const col = i % 3;
+          const x = (col - 1) * 5.2;
+          const z = (row - 0.5) * 5.5;
+
+          const singleBedGroup = new THREE.Group();
+          singleBedGroup.position.set(x, 0, z);
+          singleBedGroup.userData = { bed };
+
+          const matGeo = new THREE.BoxGeometry(2.4, 0.5, 3.8);
+          const isOccupied = !bed.isAvailable;
+          const matMat = new THREE.MeshPhongMaterial({
+            color: isOccupied ? (bed.type === 'Critical' ? 0xdc2626 : 0xd97706) : 0x0284c7,
+            shininess: 40
+          });
+          const mattress = new THREE.Mesh(matGeo, matMat);
+          mattress.position.y = 0.6;
+          singleBedGroup.add(mattress);
+
+          const pillowGeo = new THREE.BoxGeometry(1.6, 0.25, 0.8);
+          const pillowMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+          const pillow = new THREE.Mesh(pillowGeo, pillowMat);
+          pillow.position.set(0, 0.95, -1.2);
+          singleBedGroup.add(pillow);
+
+          const frameGeo = new THREE.BoxGeometry(2.6, 0.3, 4.0);
+          const frameMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
+          const frame = new THREE.Mesh(frameGeo, frameMat);
+          frame.position.y = 0.2;
+          singleBedGroup.add(frame);
+
+          const poleGeo = new THREE.CylinderGeometry(0.05, 0.05, 2.4, 8);
+          const poleMat = new THREE.MeshLambertMaterial({ color: 0x64748b });
+          const pole = new THREE.Mesh(poleGeo, poleMat);
+          pole.position.set(1.5, 1.2, -1.4);
+          singleBedGroup.add(pole);
+
+          const scrGeo = new THREE.BoxGeometry(0.8, 0.5, 0.1);
+          const scrMat = new THREE.MeshBasicMaterial({
+            color: isOccupied ? 0x10b981 : 0x475569
+          });
+          const screen = new THREE.Mesh(scrGeo, scrMat);
+          screen.position.set(1.5, 2.2, -1.4);
+          screen.rotation.y = -Math.PI / 4;
+          singleBedGroup.add(screen);
+
+          const beaconGeo = new THREE.SphereGeometry(0.25, 16, 16);
+          const beaconMat = new THREE.MeshBasicMaterial({
+            color: isOccupied ? 0xef4444 : 0x22c55e
+          });
+          const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+          beacon.position.set(0, 2.8, 0);
+          singleBedGroup.add(beacon);
+
+          bedsGroup.add(singleBedGroup);
+        });
+
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.65);
+        scene.add(ambLight);
+
+        const dirLight = new THREE.DirectionalLight(0xbae6fd, 1.2);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        const onPointerClick = e => {
+          const rect = renderer.domElement.getBoundingClientRect();
+          mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+          raycaster.setFromCamera(mouse, camera);
+          const intersects = raycaster.intersectObjects(bedsGroup.children, true);
+
+          if (intersects.length > 0) {
+            let obj = intersects[0].object;
+            while (obj.parent && obj.parent !== bedsGroup) {
+              obj = obj.parent;
+            }
+            if (obj.userData && obj.userData.bed) {
+              sound.playClick();
+              setSelectedBed(obj.userData.bed);
+            }
+          }
+        };
+
+        renderer.domElement.addEventListener('click', onPointerClick);
+
+        let isDown = false;
+        let startPos = { x: 0, y: 0 };
+        const onDown = e => { isDown = true; startPos = { x: e.clientX, y: e.clientY }; };
+        const onMove = e => {
+          if (!isDown) return;
+          const dx = e.clientX - startPos.x;
+          camera.position.x += dx * 0.02;
+          camera.lookAt(0, 0, 0);
+          startPos = { x: e.clientX, y: e.clientY };
+        };
+        const onUp = () => { isDown = false; };
+
+        renderer.domElement.addEventListener('pointerdown', onDown);
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+
+        let reqId;
+        const clock = new THREE.Clock();
+        const renderLoop = () => {
+          reqId = requestAnimationFrame(renderLoop);
+          const t = clock.getElapsedTime();
+          bedsGroup.children.forEach((bedGroup, idx) => {
+            const beacon = bedGroup.children.find(c => c.geometry && c.geometry.type === 'SphereGeometry');
+            if (beacon) {
+              beacon.position.y = 2.8 + Math.sin(t * 3 + idx) * 0.12;
+            }
+          });
+          renderer.render(scene, camera);
+        };
+        renderLoop();
+
+        return () => {
+          cancelAnimationFrame(reqId);
+          renderer.domElement.removeEventListener('click', onPointerClick);
+          renderer.domElement.removeEventListener('pointerdown', onDown);
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+          if (renderer.domElement && container.contains(renderer.domElement)) {
+            container.removeChild(renderer.domElement);
+          }
+          renderer.dispose();
+        };
+      }, [beds]);
+
+      return (
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-extrabold text-white flex items-center gap-3">
+                <span>🏥</span> Emergency Department 3D Digital Twin
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">
+                Real-time 3D simulation of emergency resuscitation suites, trauma bays, and observation units.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Available ({beds.filter(b => b.isAvailable).length})
+              </span>
+              <span className="flex items-center gap-1.5 text-rose-400 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Occupied ({beds.filter(b => !b.isAvailable).length})
+              </span>
+            </div>
+          </div>
+
+          <div className="relative rounded-3xl overflow-hidden border border-slate-700/60 shadow-2xl bg-slate-950">
+            <div ref={containerRef} className="w-full h-[420px] cursor-pointer" />
+            <div className="absolute top-4 left-5 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/50 text-xs text-slate-300 pointer-events-none">
+              🖱 Click any 3D bed to inspect bay vitals & assigned patient
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {beds.map(bed => {
+              const patient = bed.occupiedBy ? patients.find(p => p.id === bed.occupiedBy) : null;
+              return (
+                <div
+                  key={bed.id}
+                  onClick={() => { sound.playClick(); setSelectedBed(bed); }}
+                  className={`p-5 rounded-2xl border transition-all cursor-pointer ${
+                    selectedBed?.id === bed.id
+                      ? 'bg-slate-800/90 border-cyan-400 shadow-lg shadow-cyan-500/20 ring-2 ring-cyan-500/30'
+                      : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-cyan-400">{bed.id}</span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      bed.isAvailable ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    }`}>
+                      {bed.isAvailable ? '● Available' : '● In Use'}
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-white text-base mt-2">{bed.name}</h4>
+                  <div className="text-xs text-slate-400 mt-1">Tier: <b className="text-slate-200">{bed.type}</b></div>
+
+                  {patient ? (
+                    <div className="mt-4 pt-3 border-t border-slate-800/80">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-white">{patient.name}</span>
+                        <span className="text-cyan-400 font-mono">{patient.id}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-1 truncate">{patient.symptoms}</div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="text-[11px] text-slate-400">Dr: <b className="text-slate-300">{patient.assignedDoctor || 'ER Team'}</b></span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sound.playClick();
+                            onSelectPatient(patient);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-cyan-600/30 hover:bg-cyan-600 text-cyan-200 text-xs font-bold transition-all"
+                        >
+                          View Vitals
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 text-xs text-slate-500 italic">
+                      Ready for priority triage intake
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      );
+    }
+
+    // ==========================================
+    // DASHBOARD VIEW
+    // ==========================================
+    function DashboardView({ patients, queue, currentInTreatment, treatedHistory, doctors, beds, logs, onNavigate, onTreatNext, onCodeRed, onSelectPatient }) {
+      const [filterPriority, setFilterPriority] = useState('All');
+      const waiting = queue;
+      const criticalWaiting = waiting.filter(p => p.level === 'Critical').length;
+      const highWaiting = waiting.filter(p => p.level === 'High').length;
+      const bedsOccupied = beds.filter(b => !b.isAvailable).length;
+
+      const filteredQueue = filterPriority === 'All' ? queue : queue.filter(p => p.level === filterPriority);
+
+      return (
+        <div className="space-y-8">
+          <div className="relative rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-600 text-white p-7 md:p-10 shadow-2xl overflow-hidden">
+            <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-15 pointer-events-none flex items-center justify-center text-9xl">
+              ⚕️
+            </div>
+            <div className="relative z-10 max-w-2xl">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-bold tracking-wider uppercase mb-3">
+                <span className="w-2 h-2 rounded-full bg-cyan-300 animate-pulse"></span>
+                Emergency Command Operational
+              </span>
+              <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">
+                Immediate Triage. Zero-Latency Care.
+              </h1>
+              <p className="mt-3 text-blue-100 text-sm md:text-base leading-relaxed">
+                Algorithmic patient prioritization with continuous vital monitoring, 3D ward digital twins, and preemption handling.
+              </p>
+              
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => { sound.playClick(); onNavigate('Register Patient'); }}
+                  className="px-6 py-3.5 rounded-2xl bg-white text-blue-800 font-extrabold text-sm shadow-xl hover:bg-blue-50 active:scale-95 transition-all"
+                >
+                  ＋ Admit New Patient
+                </button>
+                <button
+                  onClick={() => { sound.playClick(); onTreatNext(); }}
+                  disabled={!queue.length}
+                  className="px-6 py-3.5 rounded-2xl bg-cyan-500/20 border border-white/30 text-white font-extrabold text-sm hover:bg-white/20 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  ▶ Treat Next ({queue.length ? queue[0].id : 'None'})
+                </button>
+                <button
+                  onClick={onCodeRed}
+                  className="px-5 py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-sm shadow-lg shadow-red-700/40 active:scale-95 transition-all"
+                >
+                  🚨 Inject Code Red
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <ThreeHolographicCore
+            queue={queue}
+            currentInTreatment={currentInTreatment}
+            onFilterPriority={setFilterPriority}
+            activePriority={filterPriority}
+          />
+
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {[
+              { icon: '👥', label: 'Total Patients', val: patients.length, sub: 'All records', color: 'from-blue-600/20 to-cyan-600/20 border-blue-500/30' },
+              { icon: '🚨', label: 'Critical / Urgent', val: criticalWaiting + highWaiting, sub: `${criticalWaiting} Critical • ${highWaiting} High`, color: 'from-rose-600/20 to-red-600/20 border-rose-500/30' },
+              { icon: '⏳', label: 'Waiting Queue', val: queue.length, sub: 'Sorted by Priority & FIFO', color: 'from-amber-600/20 to-yellow-600/20 border-amber-500/30' },
+              { icon: '🩺', label: 'Active Treatment', val: currentInTreatment ? 1 : 0, sub: currentInTreatment ? currentInTreatment.name : 'Bay Open', color: 'from-indigo-600/20 to-purple-600/20 border-indigo-500/30' },
+              { icon: '🛏', label: 'Beds Occupancy', val: `${bedsOccupied}/${beds.length}`, sub: `${Math.round((bedsOccupied / beds.length) * 100)}% utilization`, color: 'from-emerald-600/20 to-teal-600/20 border-emerald-500/30' }
+            ].map((stat, i) => (
+              <div
+                key={i}
+                className={`p-5 rounded-2xl bg-gradient-to-br ${stat.color} border backdrop-blur-md transition-all hover:-translate-y-1 shadow-lg`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl">{stat.icon}</span>
+                  <span className="text-2xl font-extrabold text-white font-mono">{stat.val}</span>
+                </div>
+                <div className="font-bold text-sm text-slate-200 mt-2">{stat.label}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5 truncate">{stat.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="font-extrabold text-lg text-white flex items-center gap-2">
+                    <span>⚡</span> Live Priority Queue
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Order dynamically enforced: Critical (1) ➔ High (2) ➔ Medium (3) ➔ Normal (4)
+                  </p>
+                </div>
+                <button
+                  onClick={() => onNavigate('Emergency Queue')}
+                  className="text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-colors"
+                >
+                  Full Queue View →
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {filteredQueue.slice(0, 5).map((pat, idx) => (
+                  <div
+                    key={pat.id}
+                    onClick={() => { sound.playClick(); onSelectPatient(pat); }}
+                    className="p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 flex items-center justify-between gap-3 transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center font-mono font-bold text-xs text-slate-400 group-hover:text-cyan-400 group-hover:border group-hover:border-cyan-500/50">
+                        #{idx + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white text-sm truncate">{pat.name}</span>
+                          <span className="text-xs font-mono text-cyan-400 font-semibold">{pat.id}</span>
+                          <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold uppercase ${LEVELS[pat.level].bg}`}>
+                            {LEVELS[pat.level].icon} {pat.level}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 truncate mt-0.5">
+                          {pat.age}y • {pat.gender} • {pat.symptoms}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs font-mono text-slate-400 hidden sm:inline">
+                        Wait: <b className="text-slate-200">{formatWait(pat.registered)}</b>
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTreatNext();
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-md shadow-cyan-600/30 transition-all"
+                      >
+                        Treat
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {!filteredQueue.length && (
+                  <div className="py-12 text-center text-slate-500 text-sm">
+                    No patients currently waiting in this priority category.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl">
+                <h3 className="font-extrabold text-base text-white mb-3 flex items-center gap-2">
+                  <span>👨‍⚕️</span> On-Duty ER Physicians
+                </h3>
+                <div className="space-y-2.5">
+                  {doctors.map(doc => (
+                    <div key={doc.id} className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xl">{doc.avatar}</span>
+                        <div>
+                          <b className="text-white block">{doc.name}</b>
+                          <span className="text-[11px] text-slate-400">{doc.specialty}</span>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                        doc.status === 'Available' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
+                      }`}>
+                        {doc.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl">
+                <h3 className="font-extrabold text-base text-white mb-3 flex items-center gap-2">
+                  <span>📜</span> Real-Time Audit Log
+                </h3>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {logs.slice(0, 6).map(log => (
+                    <div key={log.id} className="text-[11px] p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/30">
+                      <div className="flex items-center justify-between text-slate-500 mb-1 font-mono text-[10px]">
+                        <span>{new Date(log.time).toLocaleTimeString()}</span>
+                        <span className={`uppercase font-bold ${log.type === 'critical' ? 'text-rose-400' : 'text-cyan-400'}`}>
+                          {log.type}
+                        </span>
+                      </div>
+                      <div className="text-slate-300 leading-tight">{log.text}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // REGISTER PATIENT & SMART AI TRIAGE
+    // ==========================================
+    function RegisterView({ onSubmit, onCancel }) {
+      const [form, setForm] = useState({
+        name: '',
+        age: '28',
+        gender: 'Male',
+        symptoms: '',
+        level: 'Normal',
+        bpSys: 120,
+        bpDia: 80,
+        hr: 75,
+        spo2: 98,
+        gcs: 15
+      });
+
+      const aiRecommendation = useMemo(() => {
+        const { hr, spo2, gcs, bpSys } = form;
+        if (spo2 < 90 || hr > 130 || hr < 45 || bpSys < 90 || gcs < 13) {
+          return { level: 'Critical', reason: 'Abnormal vitals detected: Hypoxia / Hemodynamic instability.' };
+        }
+        if (spo2 < 94 || hr > 105 || bpSys > 150) {
+          return { level: 'High', reason: 'High triage severity: Elevated vitals or respiratory concern.' };
+        }
+        if (hr > 90 || bpSys > 135) {
+          return { level: 'Medium', reason: 'Moderate urgency: Requires timely evaluation.' };
+        }
+        return { level: 'Normal', reason: 'Vitals stable. Suitable for standard FIFO triage queue.' };
+      }, [form.hr, form.spo2, form.gcs, form.bpSys]);
+
+      const applyAiLevel = () => {
+        sound.playSuccess();
+        setForm(prev => ({ ...prev, level: aiRecommendation.level }));
+      };
+
+      const handleSubmit = e => {
+        e.preventDefault();
+        if (!form.name.trim() || !form.symptoms.trim()) return;
+
+        onSubmit({
+          name: form.name.trim(),
+          age: Number(form.age),
+          gender: form.gender,
+          symptoms: form.symptoms.trim(),
+          level: form.level,
+          vitals: {
+            bp: `${form.bpSys}/${form.bpDia}`,
+            hr: Number(form.hr),
+            spo2: Number(form.spo2),
+            temp: 98.6,
+            gcs: Number(form.gcs)
+          }
+        });
+      };
+
+      return (
+        <section className="max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-extrabold text-white flex items-center gap-3">
+                <span>📝</span> Patient Admission & AI Smart Triage
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">
+                Enter demographic and clinical vital signs to auto-calculate triage priority.
+              </p>
+            </div>
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-bold text-xs"
+            >
+              ✕ Cancel
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-5">
+              <h3 className="font-extrabold text-base text-white border-b border-slate-800 pb-3">
+                1. Patient Demographics & Chief Complaint
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="block text-xs font-bold text-slate-300">
+                  Patient Full Name *
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. Maya Krishnan"
+                    value={form.name}
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    className="mt-1.5 w-full p-3 rounded-xl bg-slate-800/80 border border-slate-700/60 text-white placeholder-slate-500 text-sm focus:border-cyan-400"
+                  />
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Age *
+                    <input
+                      required
+                      type="number"
+                      min="1"
+                      max="120"
+                      value={form.age}
+                      onChange={e => setForm({ ...form, age: e.target.value })}
+                      className="mt-1.5 w-full p-3 rounded-xl bg-slate-800/80 border border-slate-700/60 text-white text-sm"
+                    />
+                  </label>
+
+                  <label className="block text-xs font-bold text-slate-300">
+                    Gender
+                    <select
+                      value={form.gender}
+                      onChange={e => setForm({ ...form, gender: e.target.value })}
+                      className="mt-1.5 w-full p-3 rounded-xl bg-slate-800/80 border border-slate-700/60 text-white text-sm"
+                    >
+                      <option>Male</option>
+                      <option>Female</option>
+                      <option>Other</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <label className="block text-xs font-bold text-slate-300">
+                Primary Symptoms & Clinical Presentation *
+                <textarea
+                  required
+                  rows="3"
+                  placeholder="e.g. Acute severe chest pain radiating to left shoulder, diaphoresis..."
+                  value={form.symptoms}
+                  onChange={e => setForm({ ...form, symptoms: e.target.value })}
+                  className="mt-1.5 w-full p-3 rounded-xl bg-slate-800/80 border border-slate-700/60 text-white placeholder-slate-500 text-sm"
+                />
+              </label>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-2">
+                  Emergency Triage Level (Determines Queue Placement)
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {Object.keys(LEVELS).map(lvl => (
+                    <button
+                      type="button"
+                      key={lvl}
+                      onClick={() => { sound.playClick(); setForm({ ...form, level: lvl }); }}
+                      className={`p-3 rounded-xl text-left border transition-all ${
+                        form.level === lvl
+                          ? 'border-cyan-400 bg-slate-800 shadow-md ring-2 ring-cyan-500/20'
+                          : 'border-slate-800 bg-slate-850 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="text-base">{LEVELS[lvl].icon}</div>
+                      <div className="font-extrabold text-white text-xs mt-1">{lvl}</div>
+                      <div className="text-[10px] text-slate-400">Rank {LEVELS[lvl].rank}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-sm shadow-xl shadow-cyan-600/30 active:scale-95 transition-all"
+              >
+                ✓ Complete Admission & Insert Into Queue
+              </button>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⚡</span>
+                <div>
+                  <h3 className="font-extrabold text-base text-white">AI Vitals Evaluator</h3>
+                  <p className="text-[11px] text-slate-400">Interactive clinical sliders</p>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-300 mb-1">
+                    <span>Heart Rate (BPM)</span>
+                    <span className="font-mono text-cyan-400">{form.hr} bpm</span>
+                  </div>
+                  <input
+                    type="range" min="40" max="180" value={form.hr}
+                    onChange={e => setForm({ ...form, hr: Number(e.target.value) })}
+                    className="w-full accent-cyan-500"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-300 mb-1">
+                    <span>Oxygen Saturation (SpO2)</span>
+                    <span className="font-mono text-emerald-400">{form.spo2}%</span>
+                  </div>
+                  <input
+                    type="range" min="70" max="100" value={form.spo2}
+                    onChange={e => setForm({ ...form, spo2: Number(e.target.value) })}
+                    className="w-full accent-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-300 mb-1">
+                    <span>Systolic Blood Pressure</span>
+                    <span className="font-mono text-amber-400">{form.bpSys} mmHg</span>
+                  </div>
+                  <input
+                    type="range" min="60" max="220" value={form.bpSys}
+                    onChange={e => setForm({ ...form, bpSys: Number(e.target.value) })}
+                    className="w-full accent-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-slate-300 mb-1">
+                    <span>Glasgow Coma Scale (GCS)</span>
+                    <span className="font-mono text-purple-400">{form.gcs} / 15</span>
+                  </div>
+                  <input
+                    type="range" min="3" max="15" value={form.gcs}
+                    onChange={e => setForm({ ...form, gcs: Number(e.target.value) })}
+                    className="w-full accent-purple-500"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 p-4 rounded-2xl bg-slate-800/80 border border-slate-700/60 space-y-2">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-bold">
+                  Clinical Recommendation
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{LEVELS[aiRecommendation.level].icon}</span>
+                  <b className="text-white text-base">{aiRecommendation.level} Priority</b>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-tight">
+                  {aiRecommendation.reason}
+                </p>
+                <button
+                  type="button"
+                  onClick={applyAiLevel}
+                  className="w-full mt-2 py-2 rounded-xl bg-cyan-600/30 hover:bg-cyan-600 text-cyan-200 font-bold text-xs border border-cyan-500/40 transition-all"
+                >
+                  Apply {aiRecommendation.level} Level
+                </button>
+              </div>
+            </div>
+
+          </form>
+        </section>
+      );
+    }
+
+    // ==========================================
+    // EMERGENCY PRIORITY QUEUE VIEW
+    // ==========================================
+    function QueueView({ queue, onTreat, onRetriage, onRemove, onSelectPatient, onCallPatient }) {
+      return (
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-extrabold text-white flex items-center gap-3">
+                <span>🚨</span> Live Emergency Priority Queue
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">
+                Patients ordered strictly by Triage Rank (Critical ➔ Normal), tie-broken by Arrival Time (FIFO).
+              </p>
+            </div>
+
+            <button
+              onClick={() => onTreat()}
+              disabled={!queue.length}
+              className="px-6 py-3 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold text-sm shadow-lg shadow-cyan-600/30 transition-all disabled:opacity-50 flex items-center gap-2"
+            >
+              <span>🩺</span> Treat Head of Queue
+            </button>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between text-xs font-mono text-slate-400">
+            <span className="text-cyan-400 font-bold">◄ FRONT OF QUEUE (NEXT TO BE TREATED)</span>
+            <span>TOTAL WAITING: <b className="text-white">{queue.length}</b></span>
+            <span className="text-slate-500">REAR (LAST ARRIVALS) ►</span>
+          </div>
+
+          <div className="space-y-3">
+            {queue.map((pat, idx) => (
+              <div
+                key={pat.id}
+                className="p-5 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div className="flex items-start sm:items-center gap-4 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700/60 flex flex-col items-center justify-center shrink-0">
+                    <span className="text-[10px] text-slate-400 font-mono">POS</span>
+                    <span className="text-base font-extrabold text-cyan-400 font-mono">#{idx + 1}</span>
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <b className="text-white text-base">{pat.name}</b>
+                      <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-slate-800 text-cyan-400 font-bold">
+                        {pat.id}
+                      </span>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${LEVELS[pat.level].bg}`}>
+                        {LEVELS[pat.level].icon} {pat.level}
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-3">
+                      <span>{pat.age} yrs • {pat.gender}</span>
+                      <span>Waiting: <b className="text-slate-200">{formatWait(pat.registered)}</b></span>
+                      {pat.vitals && (
+                        <span className="font-mono text-slate-400">
+                          HR: {pat.vitals.hr} | SpO2: {pat.vitals.spo2}% | BP: {pat.vitals.bp}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-xs text-slate-300 mt-1.5 font-medium">
+                      Symptoms: {pat.symptoms}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-slate-800">
+                  <button
+                    onClick={() => onCallPatient(pat)}
+                    className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all"
+                    title="Audio Chime & Call Patient"
+                  >
+                    🔊 Call
+                  </button>
+
+                  <button
+                    onClick={() => { sound.playClick(); onSelectPatient(pat); }}
+                    className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all"
+                    title="View Clinical Vitals & Notes"
+                  >
+                    📋 Vitals
+                  </button>
+
+                  <CustomDropdown
+                    value={pat.level}
+                    onChange={lvl => onRetriage(pat.id, lvl)}
+                    options={Object.keys(LEVELS).map(lvl => ({ value: lvl, label: `${LEVELS[lvl].icon} ${lvl}` }))}
+                    className="shrink-0"
+                  />
+
+                  <button
+                    onClick={() => onTreat(pat.id)}
+                    className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold text-xs shadow-md shadow-cyan-600/30 transition-all"
+                  >
+                    Treat Now
+                  </button>
+
+                  <button
+                    onClick={() => onRemove(pat.id)}
+                    className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-rose-900/40 text-slate-400 hover:text-rose-400 text-xs transition-all"
+                    title="Discharge / Remove"
+                  >
+                    🗑
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {!queue.length && (
+              <div className="py-20 text-center rounded-3xl bg-slate-900/60 border border-slate-800">
+                <span className="text-4xl block mb-2">🎉</span>
+                <b className="text-white text-lg">Emergency Waiting Queue is Clear!</b>
+                <p className="text-slate-400 text-sm mt-1">All registered patients have been treated or discharged.</p>
+              </div>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    // ==========================================
+    // LINKED LIST DATA STRUCTURE EXPLORER
+    // ==========================================
+    function LinkedListVisualizerView({ patients, onSelectPatient }) {
+      const activeList = patients.filter(p => p.status !== 'Removed');
+      const [highlightIdx, setHighlightIdx] = useState(null);
+
+      const stepThroughList = () => {
+        sound.playClick();
+        if (highlightIdx === null || highlightIdx >= activeList.length - 1) {
+          setHighlightIdx(0);
+        } else {
+          setHighlightIdx(highlightIdx + 1);
+        }
+      };
+
+      return (
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-extrabold text-white flex items-center gap-3">
+                <span>🔗</span> Patient Records – Linked List Architecture
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">
+                Visual demonstration of dynamic memory node pointers (<span className="text-cyan-400 font-mono">HEAD ➔ Node ➔ NULL</span>).
+              </p>
+            </div>
+            
+            <button
+              onClick={stepThroughList}
+              className="px-5 py-2.5 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold text-xs shadow-lg transition-all"
+            >
+              ▶ Step Pointer Next Node ({highlightIdx !== null ? `Node ${highlightIdx + 1}` : 'Start'})
+            </button>
+          </div>
+
+          <div className="p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl overflow-x-auto">
+            <div className="flex items-center min-w-max py-6 gap-2">
+              
+              <div className="flex flex-col items-center">
+                <span className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-mono text-xs font-bold shadow-md">
+                  HEAD
+                </span>
+                <span className="text-slate-500 text-xl font-mono mt-1">▼</span>
+              </div>
+
+              {activeList.map((pat, idx) => {
+                const isSelected = highlightIdx === idx;
+                return (
+                  <div key={pat.id} className="flex items-center">
+                    <div
+                      onClick={() => { sound.playClick(); setHighlightIdx(idx); onSelectPatient(pat); }}
+                      className={`w-56 p-4 rounded-2xl border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-slate-800 border-cyan-400 shadow-xl shadow-cyan-500/20 ring-2 ring-cyan-500/40 scale-105'
+                          : 'bg-slate-850 border-slate-700/80 hover:border-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-[11px] font-mono border-b border-slate-700/60 pb-2">
+                        <span className="font-bold text-cyan-400">NODE #{idx + 1}</span>
+                        <span className="text-slate-500">addr: 0x{pat.id.slice(1)}</span>
+                      </div>
+
+                      <div className="mt-2.5">
+                        <b className="text-white text-sm block truncate">{pat.name}</b>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${LEVELS[pat.level].bg}`}>
+                            {LEVELS[pat.level].icon} {pat.level}
+                          </span>
+                          <span className="text-[10px] text-slate-400">{pat.status}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-2 border-t border-slate-700/50 flex items-center justify-between text-[11px] font-mono text-slate-400">
+                        <span>next:</span>
+                        <b className="text-indigo-400">
+                          {activeList[idx + 1] ? `0x${activeList[idx + 1].id.slice(1)}` : 'NULL'}
+                        </b>
+                      </div>
+                    </div>
+
+                    <div className="px-3 text-cyan-500 font-mono text-2xl font-bold">
+                      →
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="p-4 rounded-2xl bg-slate-800/40 border border-dashed border-slate-700 text-slate-500 font-mono text-xs font-bold">
+                NULL
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
+              <span className="text-cyan-400 font-mono text-xs font-bold uppercase">Dynamic Allocation</span>
+              <h4 className="text-white font-extrabold text-sm mt-1">O(1) Insertion At Tail</h4>
+              <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+                New admissions allocate a heap node instantly without array resizing or memory relocation.
+              </p>
+            </div>
+            <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
+              <span className="text-indigo-400 font-mono text-xs font-bold uppercase">Pointer Re-linking</span>
+              <h4 className="text-white font-extrabold text-sm mt-1">Seamless Deletion</h4>
+              <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+                Discharging patient re-links <code>prev.next = current.next</code> with zero block shifting.
+              </p>
+            </div>
+            <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
+              <span className="text-emerald-400 font-mono text-xs font-bold uppercase">Memory Overhead</span>
+              <h4 className="text-white font-extrabold text-sm mt-1">Direct Pointer Reference</h4>
+              <p className="text-slate-400 text-xs mt-1 leading-relaxed">
+                Nodes maintain forward pointers, pairing seamlessly with the Min-Heap priority queue index.
+              </p>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ==========================================
+    
+    // ==========================================
+    // CUSTOM INTERACTIVE DROPDOWN WITH ARROW
+    // ==========================================
+    function CustomDropdown({ value, options, onChange, label, className = '' }) {
+      const [open, setOpen] = useState(false);
+      const dropdownRef = useRef(null);
+
+      useEffect(() => {
+        function handleClickOutside(e) {
+          if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+            setOpen(false);
+          }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+      }, []);
+
+      const selectedOpt = options.find(o => (typeof o === 'object' ? o.value === value : o === value));
+      const displayText = typeof selectedOpt === 'object' ? selectedOpt.label : (selectedOpt || value);
+
+      return (
+        <div className={`relative inline-block ${className}`} ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => { sound.playClick(); setOpen(!open); }}
+            className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-400 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer min-w-[145px]"
+          >
+            <span className="truncate">{displayText}</span>
+            <svg
+              className={`w-3.5 h-3.5 text-cyan-400 transition-transform duration-200 shrink-0 ${open ? 'rotate-180 text-white' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {open && (
+            <div className="absolute right-0 mt-2 z-50 min-w-[175px] rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-1.5 backdrop-blur-2xl">
+              {options.map(opt => {
+                const val = typeof opt === 'object' ? opt.value : opt;
+                const lbl = typeof opt === 'object' ? opt.label : opt;
+                const isSelected = val === value;
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => {
+                      sound.playClick();
+                      onChange(val);
+                      setOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      isSelected
+                        ? 'bg-cyan-600 text-white shadow-md font-bold'
+                        : 'text-slate-200 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <span className="truncate">{lbl}</span>
+                    {isSelected && <span className="text-white text-xs font-bold ml-2">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // PATIENT MASTER RECORDS VIEW
+    // ==========================================
+    function PatientRecordsView({ patients, searchQuery, setSearchQuery, filterLevel, setFilterLevel, filterStatus, setFilterStatus, onRemove, onRetriage, onSelectPatient }) {
+      const filtered = patients.filter(p => {
+        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.symptoms.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesLevel = filterLevel === 'All' || p.level === filterLevel;
+        const matchesStatus = filterStatus === 'All' || p.status === filterStatus;
+        return matchesSearch && matchesLevel && matchesStatus;
+      });
+
+      const exportCsv = () => {
+        sound.playClick();
+        const header = ['ID', 'Name', 'Age', 'Gender', 'Priority', 'Status', 'Symptoms', 'Registered Time'];
+        const rows = filtered.map(p => [
+          p.id,
+          `"${p.name}"`,
+          p.age,
+          p.gender,
+          p.level,
+          p.status,
+          `"${p.symptoms.replace(/"/g, '""')}"`,
+          new Date(p.registered).toISOString()
+        ]);
+        const csvContent = 'data:text/csv;charset=utf-8,' + [header.join(','), ...rows.map(e => e.join(','))].join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `mediqueue_records_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+
+      return (
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-extrabold text-white flex items-center gap-3">
+                <span>📋</span> Patient Master Records
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">
+                Search, filter, export, and manage patient clinical records across all statuses.
+              </p>
+            </div>
+
+            <button
+              onClick={exportCsv}
+              className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 border border-slate-700 transition-all"
+            >
+              <span>📥</span> Export CSV / Sheets
+            </button>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-wrap items-center gap-3">
+            <div className="flex-1 min-w-[240px]">
+              <input
+                type="text"
+                placeholder="Search by patient name, ID, or symptoms..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white text-xs placeholder-slate-500"
+              />
+            </div>
+
+            <CustomDropdown
+              value={filterLevel}
+              onChange={setFilterLevel}
+              options={[
+                { value: 'All', label: 'All Priorities' },
+                ...Object.keys(LEVELS).map(k => ({ value: k, label: `${LEVELS[k].icon} ${k}` }))
+              ]}
+            />
+
+            <CustomDropdown
+              value={filterStatus}
+              onChange={setFilterStatus}
+              options={[
+                { value: 'All', label: 'All Statuses' },
+                { value: 'Waiting', label: '⏳ Waiting' },
+                { value: 'In Treatment', label: '🩺 In Treatment' },
+                { value: 'Treated', label: '✓ Treated' },
+                { value: 'Removed', label: '✕ Removed' }
+              ]}
+            />
+          </div>
+
+          <div className="rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="bg-slate-800/60 text-slate-400 border-b border-slate-700/60 uppercase font-bold tracking-wider font-mono">
+                  <th className="p-4">Patient</th>
+                  <th className="p-4">Demographics</th>
+                  <th className="p-4">Priority</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4">Vitals</th>
+                  <th className="p-4">Admitted</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {filtered.map(pat => (
+                  <tr
+                    key={pat.id}
+                    onClick={() => { sound.playClick(); onSelectPatient(pat); }}
+                    className="hover:bg-slate-800/40 cursor-pointer transition-colors"
+                  >
+                    <td className="p-4">
+                      <b className="text-white text-sm block">{pat.name}</b>
+                      <span className="font-mono text-cyan-400">{pat.id}</span>
+                    </td>
+                    <td className="p-4 text-slate-300">
+                      {pat.age} yrs • {pat.gender}
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-2.5 py-0.5 rounded-full font-bold uppercase text-[10px] ${LEVELS[pat.level].bg}`}>
+                        {LEVELS[pat.level].icon} {pat.level}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold ${
+                        pat.status === 'Waiting' ? 'bg-amber-500/20 text-amber-400' :
+                        pat.status === 'In Treatment' ? 'bg-cyan-500/20 text-cyan-400 animate-pulse' :
+                        pat.status === 'Treated' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'
+                      }`}>
+                        {pat.status}
+                      </span>
+                    </td>
+                    <td className="p-4 font-mono text-slate-300">
+                      {pat.vitals ? `HR ${pat.vitals.hr} | SpO2 ${pat.vitals.spo2}%` : 'N/A'}
+                    </td>
+                    <td className="p-4 text-slate-400 whitespace-nowrap">
+                      {new Date(pat.registered).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td className="p-4 text-right" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => onRemove(pat.id)}
+                        className="p-2 rounded-lg bg-slate-800 hover:bg-rose-900/30 text-slate-400 hover:text-rose-400 text-xs transition-all"
+                        title="Remove Record"
+                      >
+                        🗑
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {!filtered.length && (
+              <div className="py-16 text-center text-slate-500">
+                No matching patient records found.
+              </div>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    // ==========================================
+    // TREATMENT ROOM VIEW
+    // ==========================================
+    function TreatmentRoomView({ current, doctors, beds, onComplete, onCancel, onSelectPatient }) {
+      const [elapsed, setElapsed] = useState(0);
+
+      useEffect(() => {
+        if (!current?.treatmentStarted) return;
+        const interval = setInterval(() => {
+          setElapsed(Math.floor((Date.now() - current.treatmentStarted) / 1000));
+        }, 1000);
+        return () => clearInterval(interval);
+      }, [current]);
+
+      const formatSeconds = sec => {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      };
+
+      return (
+        <section className="max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-extrabold text-white flex items-center gap-3">
+                <span>🩺</span> Active Treatment Bay
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">
+                Monitored critical resuscitation area with clinical team assignments.
+              </p>
+            </div>
+          </div>
+
+          {current ? (
+            <div className="rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-700 to-cyan-600 text-white p-7 md:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-widest bg-white/20 px-2.5 py-0.5 rounded-full font-bold">
+                    CURRENTLY IN CARE
+                  </span>
+                  <h3 className="text-3xl font-extrabold mt-1">{current.name}</h3>
+                  <div className="text-xs text-blue-100 mt-1 font-mono">
+                    ID: {current.id} • {current.age} yrs • {current.gender}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-black/30 backdrop-blur-md border border-white/20 text-center">
+                  <div className="text-[10px] font-mono text-cyan-200 uppercase font-bold">Elapsed Care Time</div>
+                  <div className="text-3xl font-mono font-extrabold text-white mt-0.5">
+                    {formatSeconds(elapsed)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-7 space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Triage Level</span>
+                    <div className="text-sm font-bold text-white mt-1 flex items-center gap-1.5">
+                      <span>{LEVELS[current.level].icon}</span> {current.level}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Attending Doctor</span>
+                    <div className="text-sm font-bold text-white mt-1 truncate">
+                      {current.assignedDoctor || 'Dr. Sarah Chen'}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Assigned ER Bed</span>
+                    <div className="text-sm font-bold text-white mt-1 truncate">
+                      {current.assignedBed || 'Resuscitation Bay 1'}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">SpO2 / HR</span>
+                    <div className="text-sm font-mono font-bold text-emerald-400 mt-1">
+                      {current.vitals?.spo2 || 98}% • {current.vitals?.hr || 80} bpm
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/40">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Chief Complaint</span>
+                  <p className="text-sm text-slate-200 mt-1">{current.symptoms}</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <button
+                    onClick={onComplete}
+                    className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/30 active:scale-95 transition-all"
+                  >
+                    ✓ Complete Treatment & Discharge Patient
+                  </button>
+                  <button
+                    onClick={onCancel}
+                    className="px-6 py-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm active:scale-95 transition-all"
+                  >
+                    Return to Queue
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="py-24 text-center rounded-3xl bg-slate-900/60 border border-slate-800">
+              <span className="text-5xl block mb-3">🩺</span>
+              <b className="text-white text-xl">Treatment Room is Available</b>
+              <p className="text-slate-400 text-sm mt-1 max-w-md mx-auto">
+                No patient is currently receiving treatment. Select the next patient from the priority queue to begin care.
+              </p>
+            </div>
+          )}
+        </section>
+      );
+    }
+
+    // ==========================================
+    // DISCHARGE ARCHIVE / TREATMENT HISTORY
+    // ==========================================
+    function HistoryView({ history, onSelectPatient }) {
+      return (
+        <section className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-extrabold text-white flex items-center gap-3">
+              <span>📜</span> Treatment History & Discharge Archive
+            </h2>
+            <p className="text-slate-400 text-sm mt-1">
+              Completed treatments, discharge timestamps, and successful resolution logs.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {history.map(pat => (
+              <div
+                key={pat.id}
+                onClick={() => { sound.playClick(); onSelectPatient(pat); }}
+                className="p-5 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer shadow-lg"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold text-cyan-400">{pat.id}</span>
+                  <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    ✓ Treated & Discharged
+                  </span>
+                </div>
+
+                <h4 className="font-extrabold text-white text-base mt-2">{pat.name}</h4>
+                <div className="text-xs text-slate-400 mt-0.5">{pat.age} yrs • {pat.gender}</div>
+
+                <div className="mt-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 space-y-1">
+                  <div>Admitted: {new Date(pat.registered).toLocaleString()}</div>
+                  {pat.completed && <div>Completed: {new Date(pat.completed).toLocaleString()}</div>}
+                </div>
+              </div>
+            ))}
+
+            {!history.length && (
+              <div className="col-span-full py-20 text-center rounded-3xl bg-slate-900/60 border border-slate-800 text-slate-500 text-sm">
+                No patients have completed treatment in this session yet.
+              </div>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    // ==========================================
+    // PATIENT DETAIL & CLINICAL VITALS MODAL
+    // ==========================================
+    function PatientDetailModal({ patient, doctors, beds, onClose, onRetriage, onTreat }) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade">
+          <div className="w-full max-w-xl rounded-3xl bg-slate-900 border border-slate-700/80 shadow-2xl overflow-hidden">
+            <div className="p-6 bg-gradient-to-r from-slate-800 to-slate-850 border-b border-slate-700/60 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-mono text-cyan-400 font-bold">{patient.id}</span>
+                <h3 className="text-2xl font-extrabold text-white">{patient.name}</h3>
+                <div className="text-xs text-slate-400">{patient.age} years • {patient.gender}</div>
+              </div>
+              <button
+                onClick={() => { sound.playClick(); onClose(); }}
+                className="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+              <div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                  Clinical Vital Signs
+                </span>
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="p-3 rounded-xl bg-slate-800/80 text-center">
+                    <span className="text-[10px] text-slate-400 block">HR</span>
+                    <b className="text-sm font-mono text-cyan-400">{patient.vitals?.hr || 'N/A'} bpm</b>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-800/80 text-center">
+                    <span className="text-[10px] text-slate-400 block">SpO2</span>
+                    <b className="text-sm font-mono text-emerald-400">{patient.vitals?.spo2 || 'N/A'}%</b>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-800/80 text-center">
+                    <span className="text-[10px] text-slate-400 block">BP</span>
+                    <b className="text-sm font-mono text-amber-400">{patient.vitals?.bp || 'N/A'}</b>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-800/80 text-center">
+                    <span className="text-[10px] text-slate-400 block">GCS</span>
+                    <b className="text-sm font-mono text-purple-400">{patient.vitals?.gcs || 15}/15</b>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Symptoms & Notes
+                </span>
+                <p className="text-xs text-slate-200 bg-slate-800/60 p-3 rounded-xl border border-slate-700/40">
+                  {patient.symptoms}
+                </p>
+              </div>
+
+              {patient.notes && patient.notes.length > 0 && (
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                    Care Team Progress Notes
+                  </span>
+                  <div className="space-y-1.5">
+                    {patient.notes.map((note, idx) => (
+                      <div key={idx} className="text-xs text-slate-300 bg-slate-800/40 p-2.5 rounded-xl border border-slate-700/30">
+                        • {note}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                  Re-evaluate Priority
+                </span>
+                <div className="grid grid-cols-4 gap-2">
+                  {Object.keys(LEVELS).map(lvl => (
+                    <button
+                      key={lvl}
+                      onClick={() => {
+                        onRetriage(patient.id, lvl);
+                        onClose();
+                      }}
+                      className={`p-2 rounded-xl text-center text-xs font-bold border transition-all ${
+                        patient.level === lvl
+                          ? 'bg-cyan-600/30 border-cyan-400 text-white'
+                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      {LEVELS[lvl].icon} {lvl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-850 border-t border-slate-800 flex justify-end gap-2">
+              {patient.status === 'Waiting' && (
+                <button
+                  onClick={() => {
+                    onTreat(patient.id);
+                    onClose();
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-md transition-all"
+                >
+                  Move to Treatment
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // REAL-TIME CANVAS ECG / HEARTBEAT MONITOR
+    // ==========================================
+    function HeartbeatCanvas({ criticalCount }) {
+      const canvasRef = useRef(null);
+
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let animationFrameId;
+        let x = 0;
+        let prevY = 20;
+
+        const width = 120;
+        const height = 36;
+        canvas.width = width;
+        canvas.height = height;
+
+        const speed = criticalCount > 0 ? 2.5 : 1.5;
+
+        const draw = () => {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.12)';
+          ctx.fillRect(0, 0, width, height);
+
+          ctx.strokeStyle = criticalCount > 0 ? '#ef4444' : '#10b981';
+          ctx.lineWidth = 1.8;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(x, prevY);
+
+          x += speed;
+          if (x > width) x = 0;
+
+          let y = 18;
+          const cycleX = x % 60;
+          if (cycleX > 20 && cycleX < 24) y = 14;
+          else if (cycleX >= 24 && cycleX < 26) y = 20;
+          else if (cycleX >= 26 && cycleX < 28) y = 4;
+          else if (cycleX >= 28 && cycleX < 31) y = 30;
+          else if (cycleX >= 34 && cycleX < 42) y = 12;
+
+          ctx.lineTo(x, y);
+          ctx.stroke();
+          prevY = y;
+
+          animationFrameId = requestAnimationFrame(draw);
+        };
+        draw();
+
+        return () => cancelAnimationFrame(animationFrameId);
+      }, [criticalCount]);
+
+      return <canvas ref={canvasRef} className="rounded-lg ecg-glow" style={{ width: 120, height: 36 }} />;
+    }
+
+    // Mount React App
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+
+</html>
