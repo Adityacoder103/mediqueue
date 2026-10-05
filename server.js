@@ -5,7 +5,9 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(__dirname, 'data', 'db.json');
+const DB_PATH = process.env.VERCEL
+  ? path.join('/tmp', 'db.json')
+  : path.join(__dirname, 'data', 'db.json');
 
 app.use(cors());
 app.use(express.json());
@@ -549,9 +551,13 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`===============================================`);
-  console.log(`🏥 MediQueue Server active at http://localhost:${PORT}`);
-  console.log(`📡 SSE Stream ready at http://localhost:${PORT}/api/events`);
-  console.log(`===============================================`);
-});
+module.exports = app;
+
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`===============================================`);
+    console.log(`🏥 MediQueue Server active at http://localhost:${PORT}`);
+    console.log(`📡 SSE Stream ready at http://localhost:${PORT}/api/events`);
+    console.log(`===============================================`);
+  });
+}
